@@ -1,0 +1,222 @@
+# textstats.tau - a small text analyser written in Tau.
+#
+#   tau++ tools/textstats.tau --text notes.txt
+#   cat notes.txt | tau++ tools/textstats.tau --text -
+#   python3 tau.py tools/textstats.tau --text notes.txt      (same output, slower)
+#
+# Prints lines, words, characters, letters, digits, empty lines, the longest
+# line, and a bar chart of how often each letter a-z appears (case-insensitive).
+#
+# Registers while scanning
+#   r0 position   r1 text length   r2 current char   r3 lines   r4 words
+#   r5 1 = inside a word   r6 length of the current line   r7 longest line
+#   r8 empty lines   r9 letters   r10 digits   r12/r13/r14 helpers
+#
+# Letter counts live in the Tau cell at address 0x200: 3 bytes per letter
+# (little endian, up to 16 million each), so the histogram needs one pass only.
+
+Text tau 0x200 ""
+Text tau 0x10 "lines         "
+Text tau 0x11 "words         "
+Text tau 0x12 "characters    "
+Text tau 0x13 "letters       "
+Text tau 0x14 "digits        "
+Text tau 0x15 "empty lines   "
+Text tau 0x16 "longest line  "
+Text tau 0x20 "\nletter frequency\n"
+
+Host TextLen r1
+Set r0 0
+Set r3 0
+Set r4 0
+Set r5 0
+Set r6 0
+Set r7 0
+Set r8 0
+Set r9 0
+Set r10 0
+
+scan:
+Jge r0 r1 finish
+Host CharAt r2 r0
+Add r0 1
+Jeq r2 10 is_nl
+Jeq r2 13 is_space
+Add r6 1
+Jeq r2 32 is_space
+Jeq r2 9 is_space
+Jeq r5 1 classify
+Set r5 1
+Add r4 1
+classify:
+Jlt r2 48 scan
+Jle r2 57 is_digit
+Jlt r2 65 scan
+Jle r2 90 is_upper
+Jlt r2 97 scan
+Jgt r2 122 scan
+Set r12 r2
+Sub r12 97
+Jump is_letter
+is_upper:
+Set r12 r2
+Sub r12 65
+is_letter:
+Add r9 1
+Call inc
+Jump scan
+is_digit:
+Add r10 1
+Jump scan
+is_space:
+Set r5 0
+Jump scan
+is_nl:
+Add r3 1
+Set r5 0
+Jne r6 0 not_empty
+Add r8 1
+not_empty:
+Jle r6 r7 keep_max
+Set r7 r6
+keep_max:
+Set r6 0
+Jump scan
+
+finish:
+# a last line without a trailing newline still counts
+Jeq r6 0 report
+Add r3 1
+Jle r6 r7 report
+Set r7 r6
+
+report:
+Print 0x10
+Set r13 r3
+Call pnum
+Newline
+Print 0x11
+Set r13 r4
+Call pnum
+Newline
+Print 0x12
+Set r13 r1
+Call pnum
+Newline
+Print 0x13
+Set r13 r9
+Call pnum
+Newline
+Print 0x14
+Set r13 r10
+Call pnum
+Newline
+Print 0x15
+Set r13 r8
+Call pnum
+Newline
+Print 0x16
+Set r13 r7
+Call pnum
+Newline
+
+# ---- histogram: find the biggest count so the bars can be scaled to 40 wide
+Set r11 0
+Set r2 0
+find_max:
+Jge r2 26 max_done
+Set r12 r2
+Call getc
+Jle r13 r11 max_next
+Set r11 r13
+max_next:
+Add r2 1
+Jump find_max
+max_done:
+Jeq r11 0 stop
+Print 0x20
+Set r2 0
+row:
+Jge r2 26 stop
+Set r12 r2
+Call getc
+Jeq r13 0 row_next
+Set r0 r2
+Add r0 97
+PrintChar r0
+PrintChar ' '
+PrintChar '|'
+PrintChar ' '
+Set r4 r13
+Mul r4 40
+Div r4 r11
+Jge r4 1 draw
+Set r4 1
+draw:
+Jle r4 0 bar_end
+PrintChar '#'
+Sub r4 1
+Jump draw
+bar_end:
+PrintChar ' '
+PrintInt r13
+Newline
+row_next:
+Add r2 1
+Jump row
+stop:
+Halt
+
+# ---- inc: add 1 to the counter of letter r12 (0..25)
+inc:
+Mul r12 3
+Load r13 0x200 r12
+Add r13 1
+Store 0x200 r12 r13
+Jlt r13 256 inc_done
+Add r12 1
+Load r13 0x200 r12
+Add r13 1
+Store 0x200 r12 r13
+Jlt r13 256 inc_done
+Add r12 1
+Load r13 0x200 r12
+Add r13 1
+Store 0x200 r12 r13
+inc_done:
+Ret
+
+# ---- getc: r13 = counter of letter r12 (clobbers r12, r14)
+getc:
+Mul r12 3
+Load r13 0x200 r12
+Add r12 1
+Load r14 0x200 r12
+Mul r14 256
+Add r13 r14
+Add r12 1
+Load r14 0x200 r12
+Mul r14 65536
+Add r13 r14
+Ret
+
+# ---- pnum: print r13 right-aligned in 8 columns (clobbers r14, r15)
+pnum:
+Set r14 1
+Set r15 r13
+digits_loop:
+Jlt r15 10 pad_start
+Div r15 10
+Add r14 1
+Jump digits_loop
+pad_start:
+Set r15 8
+Sub r15 r14
+pad:
+Jle r15 0 pad_done
+PrintChar ' '
+Sub r15 1
+Jump pad
+pad_done:
+PrintInt r13
+Ret
