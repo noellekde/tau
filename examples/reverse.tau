@@ -1,0 +1,18 @@
+# reverse a string in place with Load/Store/Len
+Text tau 0x10 "Tau++ rocks"
+Len r0 0x10        # r0 = length
+Set r1 0           # left
+Set r2 r0
+Sub r2 1           # right
+swap:
+Jge r1 r2 show
+Load r3 0x10 r1
+Load r4 0x10 r2
+Store 0x10 r1 r4
+Store 0x10 r2 r3
+Add r1 1
+Sub r2 1
+Jump swap
+show:
+Print 0x10
+Newline

@@ -1,0 +1,16 @@
+Set r0 -7
+Div r0 2
+PrintInt r0
+PrintChar ' '
+Set r1 -7
+Mod r1 2
+PrintInt r1
+PrintChar ' '
+Set r2 0x7FFFFFFF
+Add r2 1
+PrintInt r2
+PrintChar ' '
+Set r3 0b1010
+Mul r3 'a'
+PrintInt r3
+Newline

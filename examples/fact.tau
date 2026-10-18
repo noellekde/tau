@@ -1,0 +1,11 @@
+# factorial of 10
+Set r0 10
+Set r1 1
+loop:
+Jle r0 1 done
+Mul r1 r0
+Sub r0 1
+Jump loop
+done:
+PrintInt r1
+Newline

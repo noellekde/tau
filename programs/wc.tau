@@ -1,0 +1,83 @@
+# wc.tau - text statistics, written in Tau.
+# Counts lines, words, characters, the longest line and blank lines of the
+# document the host provides (Host TextLen / Host CharAt).
+#
+#   tau++ programs/wc.tau --text notes.txt        (or: python3 tau.py ... )
+#   In tauIDE: open any text in the editor, then press F5 on a copy of this
+#   program - it analyses the editor text. (Keep wc.tau open in the editor
+#   and it analyses itself.)
+#
+# Registers: r0 pos  r1 length  r2 char  r3 lines  r4 words  r5 in-word flag
+#            r6 current line length  r7 longest line  r8 blank lines
+#            r9 current line has a visible character
+
+Text tau 1 "lines:   "
+Text tau 2 "words:   "
+Text tau 3 "chars:   "
+Text tau 4 "longest: "
+Text tau 5 "blank:   "
+
+Host TextLen r1
+Set r0 0
+
+loop:
+Jge r0 r1 finish
+Host CharAt r2 r0
+Add r0 1
+Jeq r2 10 eol
+Jeq r2 13 space
+Jeq r2 32 space
+Jeq r2 9 space
+# a visible character
+Add r6 1
+Set r9 1
+Jeq r5 1 loop
+Set r5 1
+Add r4 1
+Jump loop
+
+space:
+Set r5 0
+Jeq r2 13 loop
+Add r6 1
+Jump loop
+
+eol:
+Set r5 0
+Call endline
+Jump loop
+
+finish:
+Jeq r6 0 report
+Call endline
+
+report:
+Print 1
+PrintInt r3
+Newline
+Print 2
+PrintInt r4
+Newline
+Print 3
+PrintInt r1
+Newline
+Print 4
+PrintInt r7
+Newline
+Print 5
+PrintInt r8
+Newline
+Halt
+
+# finish the current line: count it, track the longest, count it if blank
+endline:
+Add r3 1
+Jle r6 r7 el_keep
+Set r7 r6
+el_keep:
+Jne r9 0 el_reset
+Add r8 1
+el_reset:
+Set r6 0
+Set r9 0
+Ret

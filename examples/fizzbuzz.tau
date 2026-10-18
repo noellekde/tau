@@ -1,0 +1,32 @@
+# FizzBuzz 1..15
+Text tau 1 "Fizz"
+Text tau 2 "Buzz"
+Set r0 1
+loop:
+Jgt r0 15 end
+Set r1 r0
+Mod r1 15
+Jeq r1 0 both
+Set r1 r0
+Mod r1 3
+Jeq r1 0 fizz
+Set r1 r0
+Mod r1 5
+Jeq r1 0 buzz
+PrintInt r0
+Jump next
+both:
+Print 1
+Print 2
+Jump next
+fizz:
+Print 1
+Jump next
+buzz:
+Print 2
+next:
+Newline
+Add r0 1
+Jump loop
+end:
+Halt

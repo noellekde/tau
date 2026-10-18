@@ -1,0 +1,21 @@
+# Call/Ret: print squares 1..5 with a subroutine
+Text tau 3 "square of "
+Text tau 4 " is "
+Set r0 1
+loop:
+Jgt r0 5 end
+Call show
+Add r0 1
+Jump loop
+end:
+Halt
+show:
+Print 3
+PrintInt r0
+Print 4
+Set r1 r0
+Mul r1 r0
+PrintInt r1
+PrintChar '!'
+PrintChar '\n'
+Ret

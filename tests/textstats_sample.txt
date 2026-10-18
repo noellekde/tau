@@ -1,0 +1,6 @@
+The quick brown fox jumps over the lazy dog.
+
+Tabs	and   spaces 123 456
+
+Zebra QUIZ  xylophone
+last line has no newline
